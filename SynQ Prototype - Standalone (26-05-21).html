@@ -1,0 +1,1802 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0A0A0B" />
+<title>SynQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Serif+Display:ital@0;1&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #0A0A0B; overscroll-behavior: none;
+  }
+  body { font-family: 'Inter Tight', system-ui, sans-serif; }
+  #root {
+    width: 100%; height: 100dvh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  button { touch-action: manipulation; }
+  button:active { opacity: 0.72; transform: scale(0.97); transition: opacity 0.08s, transform 0.08s; }
+
+  @keyframes sqPulse   { 0%,100%{opacity:1}   50%{opacity:.3}  }
+  @keyframes sqDrift   { 0%{transform:translate(0,0)} 100%{transform:translate(36px,28px)} }
+  @keyframes sqDrift2  { 0%{transform:translate(0,0)} 100%{transform:translate(-28px,-18px)} }
+  @keyframes sqFadeUp  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes sqFadeIn  { from{opacity:0} to{opacity:1} }
+  @keyframes sqPop     { 0%{transform:scale(0.92)} 60%{transform:scale(1.04)} 100%{transform:scale(1)} }
+  @keyframes sqEqualize { 0%,100%{transform:scaleY(0.35)} 50%{transform:scaleY(1)} }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<template id="__bundler_thumbnail" data-bg-color="#0A0A0B">
+  <svg viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+    <rect width="390" height="844" fill="#0A0A0B"/>
+    <!-- Waveform lines -->
+    <path d="M0 422 Q48 390 97 422 Q145 454 194 422 Q242 390 291 422 Q339 454 390 422" stroke="#FF2E93" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M0 428 Q48 396 97 428 Q145 460 194 428 Q242 396 291 428 Q339 460 390 428" stroke="#9B3DCC" stroke-width="1.5" fill="none" opacity="0.35"/>
+    <path d="M0 416 Q48 384 97 416 Q145 448 194 416 Q242 384 291 416 Q339 448 390 416" stroke="#3DEAFF" stroke-width="1.5" fill="none" opacity="0.35"/>
+    <!-- SynQ wordmark -->
+    <text x="195" y="200" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="64" fill="#F5F5F7" opacity="0.9">Syn<tspan fill="#FF2E93">Q</tspan></text>
+  </svg>
+</template>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+// SynQ shared tokens, helpers, and reusable components.
+// Lives on window so all the per-screen JSX files can use it.
+
+const SQ = {
+  // Near-black background, tonal layering
+  bg: '#0A0A0B',
+  surface: '#141418',
+  surface2: '#1C1C22',
+  border: 'rgba(255,255,255,0.08)',
+  borderStrong: 'rgba(255,255,255,0.16)',
+
+  // Text
+  text: '#F5F5F7',
+  textMuted: 'rgba(245,245,247,0.62)',
+  textFaint: 'rgba(245,245,247,0.38)',
+
+  // Accents
+  pink: '#FF2E93',           // primary club magenta
+  pinkSoft: 'rgba(255,46,147,0.18)',
+  cyan: '#3DEAFF',           // secondary
+  cyanSoft: 'rgba(61,234,255,0.16)',
+
+  // Roles
+  pColor: '#FF2E93',         // patron-queued slot
+  vColor: '#F5F5F7',         // venue slot (mono so it reads as "house")
+  vCyan: '#3DEAFF',          // alt v color in some directions
+
+  // Type
+  display: '"Bricolage Grotesque", "Space Grotesque", system-ui, sans-serif',
+  logo:    '"DM Serif Display", "Playfair Display", Georgia, serif',
+  ui: '"Inter Tight", -apple-system, system-ui, sans-serif',
+  mono: '"JetBrains Mono", ui-monospace, "SF Mono", monospace',
+};
+
+// ─────────────────────────────────────────────────────────────
+// Tweaks (single source of truth, persisted via host bridge)
+// ─────────────────────────────────────────────────────────────
+const SQ_TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "magenta",
+  "pvStyle": "filled",
+  "cadence": "3P:1V",
+  "albumGlow": true
+}/*EDITMODE-END*/;
+
+const ACCENT_PRESETS = {
+  magenta: { pink: '#FF2E93', cyan: '#3DEAFF' },
+  lime:    { pink: '#C8FF1F', cyan: '#FF6B9D' },
+  cyan:    { pink: '#3DEAFF', cyan: '#FFD43D' },
+  sunset:  { pink: '#FF4D6D', cyan: '#FFB347' },
+};
+
+function applyAccent(name) {
+  const p = ACCENT_PRESETS[name] || ACCENT_PRESETS.magenta;
+  SQ.pink = p.pink; SQ.pColor = p.pink;
+  SQ.cyan = p.cyan;
+  SQ.pinkSoft = hexA(p.pink, 0.18);
+  SQ.cyanSoft = hexA(p.cyan, 0.16);
+  document.documentElement.style.setProperty('--sq-pink', p.pink);
+  document.documentElement.style.setProperty('--sq-cyan', p.cyan);
+  document.documentElement.style.setProperty('--sq-pink-soft', hexA(p.pink, 0.18));
+  document.documentElement.style.setProperty('--sq-cyan-soft', hexA(p.cyan, 0.16));
+}
+function hexA(hex, a) {
+  const h = hex.replace('#','');
+  const n = parseInt(h.length === 3 ? h.split('').map(c=>c+c).join('') : h, 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Cadence parser — "3P:1V" → ['P','P','P','V']
+// ─────────────────────────────────────────────────────────────
+function parseCadence(c) {
+  const m = /(\d+)P:(\d+)V/.exec(c) || [null, '3', '1'];
+  const p = +m[1], v = +m[2];
+  return [...Array(p).fill('P'), ...Array(v).fill('V')];
+}
+function buildQueue(cadence, length = 12) {
+  const pat = parseCadence(cadence);
+  const out = [];
+  for (let i = 0; i < length; i++) out.push(pat[i % pat.length]);
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────
+// PVMarker — the reusable P/V indicator (style 1: filled circles)
+// Variants per tweak: filled, outline, dots
+// ─────────────────────────────────────────────────────────────
+function PVMarker({ kind, size = 28, style = 'filled', muted = false }) {
+  const isP = kind === 'P';
+  const pink = SQ.pink;
+  const fg = isP ? pink : '#fff';
+  const bg = isP ? pink : 'transparent';
+  const op = muted ? 0.4 : 1;
+  if (style === 'dots') {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: size, height: size, opacity: op,
+      }}>
+        <span style={{
+          width: isP ? size * 0.5 : size * 0.6,
+          height: isP ? size * 0.5 : size * 0.6,
+          borderRadius: '50%',
+          background: isP ? pink : 'transparent',
+          border: isP ? 'none' : `2px solid #fff`,
+        }}/>
+      </span>
+    );
+  }
+  if (style === 'square') {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: size, height: size, borderRadius: size * 0.22,
+        background: isP ? pink : 'transparent',
+        border: isP ? 'none' : `1.5px solid rgba(255,255,255,0.85)`,
+        color: isP ? '#0A0A0B' : '#fff',
+        fontFamily: SQ.display, fontWeight: 800, fontSize: size * 0.5,
+        letterSpacing: -0.4, opacity: op,
+      }}>{kind}</span>
+    );
+  }
+  // 'filled' (default — circle with letter)
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: size, height: size, borderRadius: '50%',
+      background: bg,
+      border: isP ? 'none' : `1.5px solid rgba(255,255,255,0.85)`,
+      color: isP ? '#0A0A0B' : '#fff',
+      fontFamily: SQ.display, fontWeight: 800, fontSize: size * 0.46,
+      letterSpacing: -0.4, opacity: op,
+    }}>{kind}</span>
+  );
+}
+
+// PVTrack — horizontal cadence rail used in patron sheet + host live view.
+// Renders an array of {kind, label?, you?, removable?} entries.
+function PVTrack({ items, style = 'filled', size = 28, gap = 10, showLabels = false, onRemove, compact = false }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap, flexWrap: 'wrap' }}>
+      {items.map((it, i) => (
+        <div key={i} style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          gap: 6, position: 'relative', minWidth: size,
+        }}>
+          <div style={{
+            position: 'relative',
+            outline: it.you ? `2px solid ${SQ.cyan}` : 'none',
+            outlineOffset: 2, borderRadius: '50%',
+          }}>
+            <PVMarker kind={it.kind} size={size} style={style} muted={it.played} />
+            {it.removable && onRemove && (
+              <button onClick={() => onRemove(i)} style={{
+                position: 'absolute', top: -6, right: -6,
+                width: 16, height: 16, borderRadius: 8,
+                border: 'none', background: '#0A0A0B', color: '#fff',
+                fontSize: 10, lineHeight: 1, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 0 0 1px ${SQ.borderStrong}`,
+              }} aria-label="Remove">×</button>
+            )}
+          </div>
+          {showLabels && it.label && !compact && (
+            <div style={{
+              fontFamily: SQ.ui, fontSize: 9, lineHeight: 1.1,
+              color: SQ.textFaint, maxWidth: size + 24, textAlign: 'center',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{it.label}</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// AlbumArt — placeholder squares with strong color identity.
+// We use these as visual heroes; never overlay text on them.
+// ─────────────────────────────────────────────────────────────
+const TRACK_LIB = [
+  { id: 'np', title: 'Paper Planes',       artist: 'M.I.A.',                cover: 'https://i.scdn.co/image/ab67616d0000b273a46877c3e262a53224c17324' },
+  { id: 'v1', title: "I've Seen Footage",  artist: 'Death Grips',           cover: 'https://i.scdn.co/image/ab67616d0000b273b4f8459b0f719f8a97ee1c8c' },
+  { id: 'v2', title: 'Reborn',             artist: 'Kanye West & Kid Cudi', cover: 'https://i.scdn.co/image/ab67616d0000b273013c00ee367dd85396f79c82' },
+  { id: 'v3', title: 'Myron',              artist: 'Lil Uzi Vert',          cover: 'https://i.scdn.co/image/ab67616d0000b273128d95d09561d556c65bc08b' },
+  { id: 'v4', title: 'Surf',               artist: 'Young Thug & Gunna',    cover: 'https://i.scdn.co/image/ab67616d0000b2738da62aa4aa86bb58f67196e9' },
+  { id: 'q1', title: 'Basement Freestyle', artist: 'Travis Scott',          cover: 'https://i.scdn.co/image/ab67616d0000b273a2a7386de6494fc9275e1abb' },
+  { id: 'q2', title: 'Teenager Rager',     artist: 'Ken Carson',            cover: 'https://i.scdn.co/image/ab67616d0000b27310909abf9c575f23fec87317' },
+  { id: 'q3', title: 'Dirty',              artist: 'EsDeeKid',              cover: 'https://i.scdn.co/image/ab67616d0000b273cff4bd68d5d0dd9a0a748045' },
+  { id: 'q4', title: 'Hyde',               artist: 'tonser',                cover: 'https://i.scdn.co/image/ab67616d0000b2730b9fddc3c3ba6c7bcdc48bee' },
+  { id: 'q5', title: 'Blow Me',            artist: 'fake mink',             cover: 'https://i.scdn.co/image/ab67616d0000b2738524768edcd9faef59f8dc49' },
+  { id: 'q6', title: 'Lemonade',           artist: 'Tay-K',                 cover: 'https://i.scdn.co/image/ab67616d0000b273fbfeb7ded12a79fbd98f99e8' },
+  { id: 'q7', title: 'Reality Surf',       artist: 'Bladee',                cover: 'https://i.scdn.co/image/ab67616d0000b273d754d2ef29e3f7dcd73caa3b' },
+];
+function track(id) { return TRACK_LIB.find(t => t.id === id) || TRACK_LIB[0]; }
+
+function AlbumArt({ trk, size = 240, glow = true, radius = 14, style = {} }) {
+  const t = typeof trk === 'string' ? track(trk) : (trk || TRACK_LIB[0]);
+  const shadowBase = '0 8px 24px rgba(0,0,0,0.4)';
+  const shadowGlow = '0 24px 64px -12px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.4)';
+  if (t.cover) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: radius, position: 'relative',
+        overflow: 'hidden', flexShrink: 0,
+        background: '#111',
+        boxShadow: glow ? shadowGlow : shadowBase,
+        ...style,
+      }}>
+        <img
+          src={t.cover}
+          alt={t.title}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      </div>
+    );
+  }
+  const h = t.hue || 0;
+  let bg;
+  if (t.art === 'lime') bg = `#A8C81A`;
+  else if (t.art === 'mono') bg = `#0d0d0d`;
+  else bg = `linear-gradient(135deg, oklch(0.62 0.18 ${h}), oklch(0.36 0.14 ${(h+40)%360}))`;
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: radius, position: 'relative',
+      overflow: 'hidden', flexShrink: 0,
+      boxShadow: glow ? `0 24px 64px -12px ${hueGlow(t)}, 0 8px 24px rgba(0,0,0,0.4)`
+                       : shadowBase,
+      background: bg, ...style,
+    }}>
+      {/* faux noise / grain */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: t.art === 'mono'
+          ? `radial-gradient(circle at 50% 35%, rgba(255,255,255,0.08), transparent 60%)`
+          : `radial-gradient(circle at 30% 20%, rgba(255,255,255,0.18), transparent 60%)`,
+        mixBlendMode: 'screen',
+      }} />
+      {/* brand-style label */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: t.art === 'lime' ? '"Bricolage Grotesque", sans-serif' : SQ.display,
+        fontWeight: t.art === 'lime' ? 400 : 800,
+        fontSize: typeof size === 'number'
+          ? (t.label && t.label.length > 5 ? size * 0.18 : size * 0.34)
+          : (t.label && t.label.length > 5 ? '18%' : '34%'),
+        color: t.accent, letterSpacing: -1.5,
+        textTransform: t.art === 'lime' ? 'lowercase' : 'uppercase',
+        textShadow: t.art === 'lime' ? 'none' : '0 2px 12px rgba(0,0,0,0.3)',
+      }}>{t.label}</div>
+    </div>
+  );
+}
+function hueGlow(t) {
+  if (!t.hue) return 'rgba(255,255,255,0.06)';
+  if (t.art === 'lime') return 'rgba(168,200,26,0.45)';
+  if (t.art === 'mono') return 'rgba(255,255,255,0.08)';
+  return `oklch(0.55 0.18 ${t.hue} / 0.45)`;
+}
+
+// AlbumThumb — small square thumbnail for lists & queues
+function AlbumThumb({ trk, size = 44, radius = 8 }) {
+  return <AlbumArt trk={trk} size={size} radius={radius} glow={false} />;
+}
+
+// ─────────────────────────────────────────────────────────────
+// VoteCard — patron-side vote option with live fill bar
+// ─────────────────────────────────────────────────────────────
+function VoteCard({ trk, votes = 0, total = 100, selected = false, dim = false, big = false, onTap }) {
+  const t = typeof trk === 'string' ? track(trk) : trk;
+  const pct = Math.max(0, Math.min(100, (votes / Math.max(1, total)) * 100));
+  return (
+    <button onClick={onTap} style={{
+      position: 'relative', width: '100%',
+      background: SQ.surface, border: `1.5px solid ${selected ? SQ.pink : SQ.border}`,
+      borderRadius: 14, padding: big ? '14px' : '10px',
+      display: 'flex', flexDirection: 'column', gap: 10,
+      cursor: 'pointer', textAlign: 'left',
+      overflow: 'hidden',
+      opacity: dim ? 0.5 : 1,
+      transition: 'border-color .15s, transform .15s',
+      boxShadow: selected ? `0 0 0 4px ${SQ.pinkSoft}` : 'none',
+      minHeight: big ? 180 : 130,
+      fontFamily: SQ.ui, color: SQ.text,
+    }}>
+      <AlbumArt trk={t} size={big ? '100%' : '100%'} radius={9} glow={false}
+        style={{ aspectRatio: '1 / 1', width: '100%', height: 'auto' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 13, lineHeight: 1.2,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+        <div style={{ fontSize: 11, color: SQ.textMuted,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.artist}</div>
+      </div>
+      {/* vote fill */}
+      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{
+          flex: 1, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', width: `${pct}%`,
+            background: selected ? SQ.pink : 'rgba(255,255,255,0.7)',
+            borderRadius: 3, transition: 'width .4s cubic-bezier(.2,.7,.3,1)',
+          }} />
+        </div>
+        <div style={{ fontFamily: SQ.mono, fontSize: 11, color: SQ.textMuted,
+          fontVariantNumeric: 'tabular-nums', minWidth: 28, textAlign: 'right' }}>{votes}</div>
+      </div>
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Buttons + bits
+// ─────────────────────────────────────────────────────────────
+function PrimaryBtn({ children, sub, onClick, color = SQ.pink, fg = '#0A0A0B', flex = 1 }) {
+  return (
+    <button onClick={onClick} style={{
+      flex, minHeight: 56, borderRadius: 14, border: 'none',
+      background: color, color: fg, padding: '0 18px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 1, cursor: 'pointer', fontFamily: SQ.ui,
+    }}>
+      <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: -0.3 }}>{children}</span>
+      {sub && <span style={{ fontSize: 10.5, opacity: 0.65, fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{sub}</span>}
+    </button>
+  );
+}
+function SecondaryBtn({ children, sub, onClick, flex = 1, fg = SQ.text }) {
+  return (
+    <button onClick={onClick} style={{
+      flex, minHeight: 56, borderRadius: 14, border: `1.5px solid ${SQ.borderStrong}`,
+      background: 'rgba(255,255,255,0.04)', color: fg, padding: '0 14px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 1, cursor: 'pointer', fontFamily: SQ.ui,
+    }}>
+      <span style={{ fontWeight: 600, fontSize: 14, letterSpacing: -0.2 }}>{children}</span>
+      {sub && <span style={{ fontSize: 10.5, opacity: 0.55, fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>{sub}</span>}
+    </button>
+  );
+}
+function Chip({ children, color = SQ.cyan, ghost = false, style = {} }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '4px 9px', borderRadius: 999,
+      background: ghost ? 'transparent' : hexA(color, 0.16),
+      color: color, fontFamily: SQ.mono, fontSize: 10.5, fontWeight: 600,
+      letterSpacing: 0.4, textTransform: 'uppercase',
+      border: ghost ? `1px solid ${color}` : 'none',
+      ...style,
+    }}>{children}</span>
+  );
+}
+
+// Progress bar with monospace timecodes
+function TimeBar({ pos = 0.4, total = 232, color = '#fff' }) {
+  const fmt = (s) => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+  const cur = total * pos;
+  return (
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+        <div style={{ width: `${pos*100}%`, height: '100%', background: color, borderRadius: 2 }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between',
+        fontFamily: SQ.mono, fontSize: 10.5, color: SQ.textMuted, fontVariantNumeric: 'tabular-nums' }}>
+        <span>{fmt(cur)}</span>
+        <span>−{fmt(total - cur)}</span>
+      </div>
+    </div>
+  );
+}
+
+// SynQ wordmark — italic serif (DM Serif Display), Q in the active accent.
+// Default styling: grey "Syn" + accent "Q". Used identically on onboarding
+// and on the now-playing header so the brand reads consistently between
+// the two surfaces.
+function Wordmark({ size = 36, color = SQ.textMuted }) {
+  return (
+    <span style={{
+      fontFamily: SQ.logo, fontStyle: 'italic', fontWeight: 400,
+      fontSize: size, lineHeight: 1, color,
+      letterSpacing: -0.5,
+      display: 'inline-block',
+    }}>
+      <span>Syn</span>
+      <span style={{ color: 'var(--sq-pink, ' + SQ.pink + ')' }}>Q</span>
+    </span>
+  );
+}
+
+// SVG scribble background (slow drifting blobs) — used for entry screen
+function BlobBackdrop({ accent = SQ.pink, accent2 = SQ.cyan }) {
+  return (
+    <div aria-hidden style={{
+      position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none',
+    }}>
+      <div style={{
+        position: 'absolute', top: '-18%', left: '-15%', width: '70%', aspectRatio: '1/1',
+        background: `radial-gradient(circle, ${hexA(accent, 0.55)}, transparent 65%)`,
+        filter: 'blur(40px)', animation: 'sqDrift 18s ease-in-out infinite alternate',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '-22%', right: '-18%', width: '80%', aspectRatio: '1/1',
+        background: `radial-gradient(circle, ${hexA(accent2, 0.4)}, transparent 65%)`,
+        filter: 'blur(50px)', animation: 'sqDrift2 22s ease-in-out infinite alternate',
+      }} />
+      <style>{`
+        @keyframes sqDrift  { 0%{transform:translate(0,0)} 100%{transform:translate(40px,30px)} }
+        @keyframes sqDrift2 { 0%{transform:translate(0,0)} 100%{transform:translate(-30px,-20px)} }
+      `}</style>
+    </div>
+  );
+}
+
+Object.assign(window, {
+  SQ, SQ_TWEAK_DEFAULTS, ACCENT_PRESETS, applyAccent, hexA,
+  parseCadence, buildQueue,
+  PVMarker, PVTrack,
+  AlbumArt, AlbumThumb, VoteCard, TRACK_LIB, track,
+  PrimaryBtn, SecondaryBtn, Chip, TimeBar, Wordmark, BlobBackdrop,
+});
+
+</script>
+<script type="text/babel">
+
+// ─── Primitives ────────────────────────────────────────────────
+
+function PhoneShell({ children }) {
+  return (
+    <div style={{
+      position: 'relative',
+      width: 'min(390px, 100vw)',
+      height: 'min(844px, 100dvh)',
+      background: SQ.bg,
+      overflow: 'hidden',
+      fontFamily: SQ.ui,
+      color: SQ.text,
+      isolation: 'isolate',
+      borderRadius: 'clamp(0px, calc((100vw - 390px) * 9999 + 0px), 48px)',
+      boxShadow: '0 40px 100px rgba(0,0,0,0.7)',
+    }}>
+      {/* Content — full height, no status bar */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Scene({ active, children }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      opacity: active ? 1 : 0,
+      pointerEvents: active ? 'all' : 'none',
+      transition: 'opacity 0.22s ease',
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function Sheet({ open, onClose, height = '88%', topBorder, children }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 20,
+      background: open ? 'rgba(10,10,11,0.82)' : 'rgba(10,10,11,0)',
+      backdropFilter: open ? 'blur(14px)' : 'blur(0px)',
+      display: 'flex', alignItems: 'flex-end',
+      pointerEvents: open ? 'all' : 'none',
+      transition: 'background 0.32s, backdrop-filter 0.32s',
+    }} onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        width: '100%', height,
+        background: SQ.bg,
+        borderRadius: '22px 22px 0 0',
+        borderTop: `1.5px solid ${topBorder || SQ.borderStrong}`,
+        transform: open ? 'translateY(0)' : 'translateY(100%)',
+        transition: 'transform 0.38s cubic-bezier(0.32, 0.72, 0, 1)',
+        display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: SQ.borderStrong }} />
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Toast({ msg, visible }) {
+  return (
+    <div style={{
+      position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)',
+      background: SQ.surface2, border: `1px solid ${SQ.borderStrong}`,
+      borderRadius: 24, padding: '10px 18px', zIndex: 200,
+      fontFamily: SQ.ui, fontSize: 13, color: SQ.text, fontWeight: 600,
+      opacity: visible ? 1 : 0, pointerEvents: 'none',
+      transition: 'opacity 0.25s',
+      whiteSpace: 'nowrap',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+    }}>
+      {msg}
+    </div>
+  );
+}
+
+// ─── Field — vertical-bar audio visualization ──────────────
+//
+// 65 vertical bars in a horizontal lens centered on the input baseline. The
+// cluster scales (amplitude, spread, brightness) with focus and character
+// count. It's intentionally ambient and oversized: extends well past the
+// input wrapper so it feels like the room is listening, not a small widget.
+//
+// Visual rules:
+//   • No center axis bar — the SynQ wordmark above carries that role.
+//   • No bar floor — wing bars are allowed to collapse to 0, so we don't
+//     end up with a 1px horizontal seam running through the middle.
+//   • All bars are pure white; only their opacity varies across the cluster
+//     width: fully transparent on the far left, ramping via easeInOutQuad to
+//     full opacity at ~66% across, then holding at full from there rightward.
+//
+// Rendering: canvas2d at devicePixelRatio, integer device-pixel positions for
+// crisp bars, frame-rate-independent lerp for all state transitions, no CSS
+// transitions on per-frame values. Single rAF loop.
+
+function FieldVisualization({ focused, charCount }) {
+  const canvasRef = React.useRef(null);
+  const rafRef    = React.useRef(null);
+
+  // Three interpolated values — overall amplitude, lens spread, brightness.
+  // Start near rest so the very first frame is already composed.
+  const ampRef    = React.useRef(0.10);
+  const spreadRef = React.useRef(0.25);
+  const brightRef = React.useRef(0.50);
+
+  // Mirror props into refs so the rAF closure always reads the latest values.
+  const focusedRef   = React.useRef(focused);
+  const charCountRef = React.useRef(charCount);
+  React.useEffect(() => { focusedRef.current = focused; }, [focused]);
+  // useLayoutEffect fires before paint → backspace decel feels symmetric
+  // with typing accel; no per-keystroke jump.
+  React.useLayoutEffect(() => { charCountRef.current = charCount; }, [charCount]);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let dpr = window.devicePixelRatio || 1;
+
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (!w || !h) return;
+      canvas.width  = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    resize();
+    const ro = (typeof ResizeObserver !== 'undefined') ? new ResizeObserver(resize) : null;
+    if (ro) ro.observe(canvas);
+    window.addEventListener('resize', resize);
+
+    const BAR_COUNT  = 65;
+    const CENTER_IDX = 32;
+
+    let start  = null;
+    let lastTs = null;
+
+    function draw(ts) {
+      if (start  === null) start  = ts;
+      if (lastTs === null) lastTs = ts;
+      const t  = (ts - start)  / 1000;
+      const dt = Math.min(64, ts - lastTs) / 16.667; // 1.0 == 60fps frame
+      lastTs = ts;
+
+      const W = canvas.width;
+      const H = canvas.height;
+      if (!W || !H) {
+        rafRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      // ── Targets ────────────────────────────────────────────────
+      const isFocused = focusedRef.current;
+      const chars     = charCountRef.current;
+      const charRatio = Math.min(chars / 12, 1);
+
+      let tAmp, tSpread, tBright;
+      if (chars === 0 && !isFocused) {
+        tAmp    = 0.10;
+        tSpread = 0.22;
+        tBright = 0.50;
+      } else if (chars === 0 && isFocused) {
+        tAmp    = 0.20;
+        tSpread = 0.36;
+        tBright = 0.68;
+      } else {
+        tAmp    = 0.20 + charRatio * 0.68;
+        tSpread = 0.36 + charRatio * 0.54;
+        tBright = 0.68 + charRatio * 0.27;
+      }
+
+      const lerp = (cur, target, baseRate) =>
+        cur + (target - cur) * (1 - Math.pow(1 - baseRate, dt));
+
+      ampRef.current    = lerp(ampRef.current,    tAmp,    0.085);
+      spreadRef.current = lerp(spreadRef.current, tSpread, 0.075);
+      brightRef.current = lerp(brightRef.current, tBright, 0.10);
+
+      const amp    = ampRef.current;
+      const spread = spreadRef.current;
+      const bright = brightRef.current;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // ── Geometry ───────────────────────────────────────────────
+      // Cluster spans nearly the full canvas width — the canvas itself is
+      // sized way wider than the input so the lens reads ambient.
+      const clientW    = canvas.clientWidth;
+      const clusterCss = clientW * 0.96;
+      const clusterW   = clusterCss * dpr;
+      const stepX      = clusterW / (BAR_COUNT - 1);
+
+      const barW       = Math.max(1, stepX * 0.30);
+
+      const cx = W / 2;
+      const cy = H / 2;
+
+      // Bars reach a generous portion of the canvas height — the canvas is tall
+      // so this still feels ambient and oversized rather than tightly bounded.
+      const maxHalfH = H * 0.46;
+
+      // Base color & tone — tracks the "Syn" wordmark's grey
+      // (SQ.textMuted = rgba(245,245,247, 0.62)). Same off-white channel as
+      // body text, dimmed by a 0.62 base alpha so the cluster sits at the
+      // same brightness as the muted wordmark instead of pure white. The
+      // horizontal opacity gradient + state-driven amplitude all multiply
+      // on top of this base tone.
+      const fillRGB    = '245, 245, 247';
+      const baseAlpha  = 0.62;
+
+      // ── Bars ───────────────────────────────────────────────────
+      for (let i = 0; i < BAR_COUNT; i++) {
+        const nx   = (i - CENTER_IDX) / CENTER_IDX; // [-1, 1]
+        const dist = Math.abs(nx);
+
+        // Lens envelope — bars peak near the center, taper toward wings.
+        const sharpness = 6.0 - spread * 4.5;
+        const envelope  = Math.exp(-dist * dist * sharpness);
+
+        // Two detuned sines so neighbours don't lock into a sawtooth wobble.
+        const phase  = i * 0.41;
+        const wob1   = Math.sin(t * 1.05 + phase);
+        const wob2   = Math.sin(t * 0.62 + phase * 1.7 + 1.3);
+        const wobble = (wob1 * 0.6 + wob2 * 0.4 + 1) * 0.5;
+
+        // Per-bar height fraction. Wing bars are allowed to collapse to 0 so
+        // we don't end up with a continuous 1px horizontal seam at the axis.
+        const heightFrac = envelope * (0.55 + 0.45 * wobble) * amp;
+        const halfH      = heightFrac * maxHalfH;
+        // Soft cutoff — below this fraction the bar disappears entirely.
+        // Prevents the visible "horizontal line" formed by all bars crossing
+        // the axis at a sub-pixel height.
+        if (halfH < 1.2 * dpr) continue;
+
+        // State-driven opacity — scales with the animated bright value only.
+        // Spatial shaping is handled by bar HEIGHT (via envelope) and by gMul
+        // below, so no separate per-position focusGlow factor is needed here.
+        const localOp = bright * 0.9;
+
+        // Horizontal opacity gradient — applied in the VISIBLE coordinate
+        // space, not bar-index space. The cluster extends far beyond the
+        // phone frame, so a 0→1 ramp over bar indices barely changes inside
+        // what the user sees. Instead we map each bar's screen-x to the
+        // input wrapper's width (= visible cluster width): 0 at the left
+        // edge of the input, 1 at the right edge. Off-screen bars to the
+        // left clamp to MIN_FLOOR (faintly present, not invisible);
+        // off-screen bars to the right clamp to 1 (fully white).
+        // EaseInOutQuad ramps MIN_FLOOR→1 over [0, FULL_X], then holds at 1.
+        // FULL_X ≈ 0.60 lands the "fully opaque" point at the trailing "e"
+        // of the "your nickname" placeholder. The center bar is
+        // unconditionally pinned at gMul=1.
+        const MIN_FLOOR = 0.15;
+        const FULL_X    = 0.60;
+        const parentEl = canvas.parentElement;
+        const inputW   = parentEl ? parentEl.clientWidth : clientW;
+        const barCssX  = nx * (clusterCss / 2);            // CSS px from center
+        const visibleX = 0.5 + barCssX / Math.max(1, inputW); // 0..1 across input
+        let gMul;
+        if (i === CENTER_IDX) {
+          gMul = 1.0;                                       // signature bar: always full
+        } else if (visibleX <= 0) {
+          gMul = MIN_FLOOR;                                 // off the visible left — faintly present
+        } else if (visibleX >= FULL_X) {
+          gMul = 1;                                         // past the "e" of nickname — full white
+        } else {
+          const u = visibleX / FULL_X;                      // remap [0, FULL_X] → [0, 1]
+          const eased = u < 0.5 ? 2 * u * u : -1 + (4 - 2 * u) * u; // easeInOutQuad
+          gMul = MIN_FLOOR + (1 - MIN_FLOOR) * eased;
+        }
+
+        const alpha = localOp * gMul;
+
+        // Subpixel alignment — snap to integer device-pixel grid so bars
+        // don't shimmer between frames.
+        const centerX = cx + nx * (clusterW / 2);
+        const x       = Math.round(centerX - barW / 2);
+        const wInt    = Math.max(1, Math.round(barW));
+        const hInt    = Math.max(1, Math.round(halfH * 2));
+        const y       = Math.round(cy - hInt / 2);
+
+        ctx.fillStyle = `rgba(${fillRGB}, ${alpha * baseAlpha})`;
+        ctx.fillRect(x, y, wInt, hInt);
+      }
+
+      rafRef.current = requestAnimationFrame(draw);
+    }
+
+    rafRef.current = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener('resize', resize);
+      if (ro) ro.disconnect();
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden
+      style={{
+        position: 'absolute',
+        left: '50%',
+        top: '100%',                          // axis sits on the input baseline
+        transform: 'translate(-50%, -50%)',    // then re-centered on it
+        width: 'calc(100vw + 160px)',          // ambient — extends well past the phone frame
+        height: 560,                           // tall lens, fills the lower half of the screen
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
+// ─── SCREEN 1 — Entry ───────────────────────────────────────
+
+// Tracks the on-screen keyboard's height on iOS via the VisualViewport API.
+// Returns the number of pixels the layout viewport overhangs the visible
+// viewport — i.e. how far up content needs to shift to clear the keyboard.
+function useKeyboardOffset() {
+  const [kb, setKb] = React.useState(0);
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKb(offset);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
+  return kb;
+}
+
+function EntryScene({ onJoin }) {
+  const [value, setValue] = React.useState('');
+  const [focused, setFocused] = React.useState(false);
+  const kbOffset = useKeyboardOffset();
+  const ready = value.trim().length >= 2;
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && ready) {
+      e.preventDefault();
+      onJoin(value.trim());
+    }
+  }
+
+  return (
+    <div style={{ height: '100%', position: 'relative', overflow: 'hidden', background: '#000' }}>
+      {/* Pure black background — no glows, no gradients. The Field carries
+          all the visual weight, anchored to the input below. */}
+      <div style={{
+        position: 'relative', zIndex: 1, height: '100%',
+        display: 'flex', flexDirection: 'column',
+        padding: '56px 32px 40px',
+      }}>
+        <Wordmark size={26} />
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 36, minHeight: 0 }}>
+          {/* Headline */}
+          <div style={{
+            fontFamily: SQ.display, fontWeight: 600, fontSize: 38,
+            letterSpacing: -1.7, lineHeight: 1.02, color: SQ.text,
+          }}>
+            What<br />should we<br />call you?
+          </div>
+
+          {/* Nickname input — the Field cluster sits behind it, centered
+              on the input's underline. The input rests on the bars like
+              a needle on a record. */}
+          <div style={{ position: 'relative' }}>
+            <FieldVisualization focused={focused} charCount={value.length} />
+            <input
+              type="text"
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              onKeyDown={handleKey}
+              placeholder="your nickname"
+              maxLength={20}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              enterKeyHint="go"
+              style={{
+                position: 'relative', zIndex: 1,  // sit above the Field
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: `1.5px solid ${ready ? SQ.text : SQ.borderStrong}`,
+                outline: 'none',
+                padding: '0 0 12px',
+                fontFamily: SQ.display, fontWeight: 500, fontSize: 30,
+                letterSpacing: -0.8,
+                color: SQ.text,
+                transition: 'border-color .2s',
+                userSelect: 'text',
+                WebkitUserSelect: 'text',
+              }}
+            />
+            <style>{`
+              input::placeholder { color: rgba(245,245,247,0.3); }
+              input:focus { outline: none; }
+            `}</style>
+          </div>
+        </div>
+
+        {/* Spacer so the Field/headline don't get visually cramped by the
+            absolutely-positioned button below them. */}
+        <div style={{ height: 62 + 8, flexShrink: 0 }} />
+      </div>
+
+      {/* CTA — absolutely positioned so it rides above the iOS keyboard.
+          When the keyboard is up, kbOffset reports the overhang and the
+          button's bottom shifts to sit just above the keyboard's top edge. */}
+      <button
+        onClick={() => ready && onJoin(value.trim())}
+        // Prevent iOS from blurring the input on press — the keyboard would
+        // dismiss, kbOffset would go to 0, and the button would jump out
+        // from under the user's finger, swallowing the tap. preventDefault
+        // on mousedown stops the focus change without canceling the click.
+        onMouseDown={(e) => { e.preventDefault(); }}
+        disabled={!ready}
+        style={{
+          position: 'absolute',
+          left: 32, right: 32,
+          bottom: 24 + kbOffset,
+          height: 62, borderRadius: 31, border: 'none',
+          background: ready ? SQ.text : 'rgba(255,255,255,0.08)',
+          color: ready ? SQ.bg : SQ.textFaint,
+          fontFamily: SQ.ui, fontWeight: 600, fontSize: 17, letterSpacing: -0.3,
+          cursor: ready ? 'pointer' : 'default',
+          transition: 'background .2s, color .2s, bottom .18s cubic-bezier(0.32, 0.72, 0, 1)',
+          zIndex: 5,
+          touchAction: 'manipulation',
+        }}
+      >
+        Join the Party
+      </button>
+    </div>
+  );
+}
+
+// ─── Swipe Handle ──────────────────────────────────────────
+
+function SwipeHandle({ onSwipeUp }) {
+  const startY = React.useRef(null);
+
+  function onTouchStart(e) {
+    startY.current = e.touches[0].clientY;
+  }
+
+  function onTouchEnd(e) {
+    if (startY.current === null) return;
+    const dy = startY.current - e.changedTouches[0].clientY;
+    if (dy > 24) onSwipeUp(); // swiped up 24px+
+    startY.current = null;
+  }
+
+  return (
+    <div
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onClick={onSwipeUp}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+        padding: '10px 0 16px', cursor: 'pointer', width: '100%',
+        WebkitUserSelect: 'none',
+      }}
+    >
+      <div style={{ width: 34, height: 4, borderRadius: 2, background: SQ.borderStrong }} />
+      <span style={{ fontFamily: SQ.mono, fontSize: 9, color: SQ.textFaint, letterSpacing: 0.6, textTransform: 'uppercase' }}>
+        Live Queue / Vote
+      </span>
+    </div>
+  );
+}
+
+// ─── SCREEN 2 — Now Playing ─────────────────────────────────
+
+function NowPlayingScene({ nickname, queuesLeft, hasQueued, youUp, skipCount, onRequest, onVote, onBump, onQueue, onSkip, onThemeClick }) {
+  const np = track('np');
+  const items = buildQueue('3P:1V', 7).map((kind, i) => ({
+    kind,
+    you: hasQueued && i === 3 && kind === 'P',
+  }));
+
+  // Skip-track state machine: idle (default) → confirm (red) → voted (subtle)
+  // In a real build this resets when a new track begins playing.
+  const [skipState, setSkipState] = React.useState('idle');
+  function handleSkipTap() {
+    if (skipState === 'idle') {
+      setSkipState('confirm');
+    } else if (skipState === 'confirm') {
+      setSkipState('voted');
+      onSkip();
+    }
+  }
+  // Visual presets per state
+  const skipStyles = {
+    idle: {
+      background: '#000',
+      border: `1px solid ${SQ.borderStrong}`,
+      color: SQ.text,
+      countColor: SQ.textFaint,
+      cursor: 'pointer',
+    },
+    confirm: {
+      background: '#E5484D',
+      border: `1px solid #E5484D`,
+      color: '#fff',
+      countColor: 'rgba(255,255,255,0.78)',
+      cursor: 'pointer',
+    },
+    voted: {
+      background: 'transparent',
+      border: `1px solid ${SQ.border}`,
+      color: SQ.textFaint,
+      countColor: SQ.textFaint,
+      cursor: 'default',
+    },
+  };
+  const ss = skipStyles[skipState];
+  const skipLabel = skipState === 'confirm' ? 'Confirm skip' : skipState === 'voted' ? 'Skip queued' : 'Skip track';
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {/* Ambient glow from album */}
+      <div aria-hidden style={{
+        position: 'absolute', top: -60, left: '50%', transform: 'translateX(-50%)',
+        width: 480, height: 480, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(255,255,255,0.06), transparent 65%)',
+        filter: 'blur(72px)', pointerEvents: 'none',
+      }} />
+
+      {/* Top bar — SynQ logo, centered, clickable to cycle theme.
+          Default Wordmark styling matches onboarding: grey "Syn" + accent "Q". */}
+      <div style={{ padding: '10px 22px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <button onClick={onThemeClick} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 12px', borderRadius: 20 }}>
+          <Wordmark size={26} />
+        </button>
+      </div>
+
+      {/* Album hero */}
+      <div style={{ padding: '6px 32px 0', flexShrink: 0 }}>
+        {/* Labels aligned to album corners */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ fontFamily: SQ.mono, fontSize: 10, color: SQ.textFaint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Now Playing</span>
+          <span style={{ fontFamily: SQ.mono, fontSize: 10, color: SQ.textFaint, letterSpacing: 0.4 }}>{nickname}</span>
+        </div>
+        <AlbumArt trk={np} size={300} radius={10} glow={false}
+          style={{ width: '100%', height: 'auto', aspectRatio: '1/1' }} />
+        <div style={{ marginTop: 16 }}>
+          <div style={{
+            fontFamily: SQ.display, fontWeight: 600, fontSize: 24, letterSpacing: -0.9,
+            lineHeight: 1.05, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>{np.title}</div>
+          <div style={{ color: SQ.textMuted, fontSize: 13, marginTop: 3 }}>{np.artist}</div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <TimeBar pos={0.32} total={196} color={SQ.text} />
+        </div>
+      </div>
+
+      {/* "You're up next" — centered text with a soft circular hue behind it.
+          The hue's center sits below the text so its bottom is covered by the
+          Request a Song / Cut the Queue buttons; only the top arc peeks
+          through behind the text, blending into the background. */}
+      {youUp && (
+        <div style={{
+          position: 'relative',
+          margin: '14px 0 0',
+          flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none',
+          animation: 'sqFadeUp 0.4s ease',
+        }}>
+          {/* Circular gradient hue — radiates outward from a point below the
+              text. Fades to fully transparent well before the wrappers edge so
+              the text reads clean against the page. */}
+          <div aria-hidden style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -12%)',
+            width: 360, height: 360, borderRadius: '50%',
+            background: `radial-gradient(circle at center, ${hexA(SQ.pink, 0.65)} 0%, ${hexA(SQ.pink, 0.42)} 22%, ${hexA(SQ.pink, 0.18)} 48%, ${hexA(SQ.pink, 0)} 72%)`,
+            filter: 'blur(4px)',
+          }} />
+          {/* Text — sits on top of the hue */}
+          <div style={{ position: 'relative', textAlign: 'center', zIndex: 1, padding: '4px 22px' }}>
+            <div style={{ fontWeight: 600, fontSize: 14, letterSpacing: -0.2, color: SQ.text }}>
+              You're up next, <span style={{ color: SQ.pink }}>{nickname}</span>
+            </div>
+            <div style={{ fontSize: 11.5, color: SQ.textMuted, marginTop: 2 }}>Padam Padam plays next</div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ flex: 1 }} />
+
+      {/* Action bar */}
+      <div style={{
+        borderTop: `1px solid ${SQ.border}`,
+        background: 'rgba(10,10,11,0.65)', backdropFilter: 'blur(12px)',
+        flexShrink: 0, padding: '10px 16px 0',
+      }}>
+        {/* Request + Cut the Queue — equal size, bigger */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <button onClick={onRequest} style={{
+            flex: 1, height: 64, borderRadius: 16,
+            background: 'rgba(255,255,255,0.10)', border: `1.5px solid ${SQ.borderStrong}`,
+            color: SQ.text, fontFamily: SQ.ui, fontWeight: 600, fontSize: 15, letterSpacing: -0.2,
+            cursor: 'pointer',
+          }}>Request a song</button>
+          <button onClick={onBump} style={{
+            flex: 1, height: 64, borderRadius: 16,
+            background: 'rgba(255,255,255,0.10)', border: `1.5px solid ${SQ.borderStrong}`,
+            color: SQ.text, fontFamily: SQ.ui, fontWeight: 600, fontSize: 15, letterSpacing: -0.2,
+            cursor: 'pointer',
+          }}>Cut the Queue</button>
+        </div>
+        {/* Skip — state machine: idle → confirm (red) → voted (subtle) */}
+        <div style={{ display: 'flex' }}>
+          <button
+            onClick={skipState === 'voted' ? undefined : handleSkipTap}
+            disabled={skipState === 'voted'}
+            style={{
+              flex: 1, height: 42, borderRadius: 12,
+              border: ss.border, background: ss.background, color: ss.color,
+              fontFamily: SQ.ui, fontWeight: 600, fontSize: 13,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              cursor: ss.cursor,
+              transition: 'background 0.2s, border-color 0.2s, color 0.2s',
+              letterSpacing: -0.1,
+            }}>
+            <span>{skipLabel}</span>
+            <span style={{
+              fontFamily: SQ.mono, fontSize: 10, color: ss.countColor,
+              fontVariantNumeric: 'tabular-nums',
+            }}>{skipCount}/40</span>
+          </button>
+        </div>
+
+        {/* Queue swipe handle */}
+        {React.createElement(SwipeHandle, { onSwipeUp: onQueue })}
+      </div>
+    </div>
+  );
+}
+
+// ─── SHEET — Vote ───────────────────────────────────────────
+
+function VoteSheet({ open, onClose, onLock }) {
+  const [sel, setSel] = React.useState(null);
+  const DATA = [
+    { id: 'v1', votes: 28 }, { id: 'v2', votes: 18 },
+    { id: 'v3', votes: 9  }, { id: 'v4', votes: 7  },
+  ];
+  const total = 62;
+
+  function handleLock() {
+    if (!sel) return;
+    setSel(null);
+    onLock();
+  }
+
+  React.useEffect(() => { if (!open) setSel(null); }, [open]);
+
+  return (
+    <Sheet open={open} onClose={onClose} height="90%">
+      <div style={{ padding: '0 22px 22px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4, flexShrink: 0 }}>
+          <div style={{ fontFamily: SQ.display, fontWeight: 600, fontSize: 24, letterSpacing: -0.9 }}>What should play next?</div>
+          <span style={{ fontFamily: SQ.mono, fontSize: 11, color: SQ.textFaint }}>62 VOTES</span>
+        </div>
+        <div style={{ fontSize: 12, color: SQ.textMuted, marginBottom: 14, flexShrink: 0 }}>
+          The song with the most votes will play next.
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1, overflow: 'auto', minHeight: 0 }}>
+          {DATA.map(({ id, votes }) => (
+            <VoteCard key={id} trk={id} votes={votes} total={total}
+              selected={sel === id}
+              onTap={() => setSel(id)} />
+          ))}
+        </div>
+        <button onClick={handleLock} style={{
+          marginTop: 14, height: 54, borderRadius: 14, border: 'none',
+          background: sel ? SQ.text : 'rgba(255,255,255,0.07)',
+          color: sel ? SQ.bg : SQ.textFaint,
+          fontFamily: SQ.ui, fontWeight: 600, fontSize: 15,
+          cursor: sel ? 'pointer' : 'default',
+          transition: 'background 0.2s, color 0.2s',
+          flexShrink: 0,
+        }}>Lock in vote</button>
+      </div>
+    </Sheet>
+  );
+}
+
+// ─── SHEET — Bump ───────────────────────────────────────────
+
+function BumpSheet({ open, onClose, onBump, nickname }) {
+  const [selTrack, setSelTrack] = React.useState(null);
+  const [expandedId, setExpandedId] = React.useState(null);
+  const results = TRACK_LIB.slice(2, 9);
+
+  React.useEffect(() => { if (!open) { setSelTrack(null); setExpandedId(null); } }, [open]);
+
+  function handleAction(t) {
+    if (expandedId === t.id) {
+      setSelTrack(t);
+    } else {
+      setExpandedId(t.id);
+      setSelTrack(null);
+    }
+  }
+  function handleConfirm() { setSelTrack(null); setExpandedId(null); onBump(); }
+
+  return (
+    <Sheet open={open} onClose={onClose} height="92%">
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ padding: '0 22px 12px', flexShrink: 0 }}>
+          <div style={{ fontFamily: SQ.display, fontWeight: 700, fontSize: 26, letterSpacing: -0.9, color: SQ.text }}>
+            Cut the Queue
+          </div>
+          <div style={{ marginTop: 6, fontSize: 13, color: SQ.textMuted, lineHeight: 1.5 }}>
+            Skip the line. Your song's up after this one.
+          </div>
+        </div>
+
+        {/* Price strip — $10 + card on file, no "charged to bar tab" label */}
+        <div style={{
+          margin: '0 22px 12px', padding: '10px 14px', borderRadius: 12, flexShrink: 0,
+          background: hexA(SQ.pink, 0.08), border: `1px solid ${hexA(SQ.pink, 0.4)}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontFamily: SQ.logo, fontStyle: 'italic', fontSize: 28, color: SQ.pink, lineHeight: 1, letterSpacing: -0.5 }}>$10.00</div>
+          <div style={{ fontFamily: SQ.mono, fontSize: 10.5, color: SQ.textFaint, textAlign: 'right', lineHeight: 1.6 }}>
+            CARD ON FILE<br /><span style={{ color: SQ.textMuted }}>VISA •• 4242</span>
+          </div>
+        </div>
+
+        {/* Search bar — same as Request a Song */}
+        <div style={{ padding: '0 22px', flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '11px 14px',
+            border: `1px solid ${SQ.border}`,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="rgba(245,245,247,0.5)" strokeWidth="1.5" />
+              <path d="M9.5 9.5L13 13" stroke="rgba(245,245,247,0.5)" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span style={{ color: SQ.textMuted, fontSize: 14 }}>Search songs</span>
+            <span style={{ width: 1, height: 14, background: SQ.pink, marginLeft: 1, animation: 'sqPulse 1s infinite' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto', paddingBottom: 4 }}>
+            {['Patron-queueable','Pop','House','Hyperpop','Throwback'].map((f, i) => (
+              <span key={f} style={{
+                padding: '5px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+                background: i === 0 ? hexA(SQ.pink, 0.18) : 'rgba(255,255,255,0.05)',
+                color: i === 0 ? SQ.pink : SQ.textMuted,
+                border: i === 0 ? `1px solid ${SQ.pink}` : `1px solid ${SQ.border}`,
+              }}>{f}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Results — "+" morphs into "Request" pill on first tap */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '8px 14px 0' }}>
+          {results.map((t) => {
+            const isExpanded = expandedId === t.id;
+            return (
+              <div key={t.id} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '9px 4px',
+              }}>
+                <AlbumThumb trk={t} size={46} radius={8} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                  <div style={{ fontSize: 12, color: SQ.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.artist}</div>
+                </div>
+                <button onClick={() => handleAction(t)} style={{
+                  flexShrink: 0,
+                  width: isExpanded ? 92 : 32,
+                  height: 32, borderRadius: isExpanded ? 16 : 8,
+                  background: isExpanded ? SQ.pink : 'transparent',
+                  color: isExpanded ? '#0A0A0B' : SQ.text,
+                  border: isExpanded ? 'none' : `1px solid ${SQ.borderStrong}`,
+                  fontFamily: SQ.ui, fontSize: isExpanded ? 13 : 18,
+                  fontWeight: isExpanded ? 700 : 500, letterSpacing: -0.2,
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden', whiteSpace: 'nowrap',
+                  transition: 'width 0.22s cubic-bezier(0.32, 0.72, 0, 1), background 0.22s, color 0.22s, border-radius 0.22s, font-size 0.18s',
+                }}>{isExpanded ? 'Request' : '+'}</button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Confirm */}
+        <div style={{ padding: '12px 22px 20px', flexShrink: 0, display: 'flex', gap: 8 }}>
+          <button onClick={onClose} style={{
+            flex: 1, height: 54, borderRadius: 14,
+            border: `1.5px solid ${SQ.borderStrong}`, background: 'transparent', color: SQ.text,
+            fontFamily: SQ.ui, fontWeight: 600, fontSize: 15, cursor: 'pointer',
+          }}>Cancel</button>
+          <button onClick={selTrack ? handleConfirm : undefined} style={{
+            flex: 1.4, height: 54, borderRadius: 14, border: 'none',
+            background: selTrack ? SQ.pink : 'rgba(255,255,255,0.07)',
+            color: selTrack ? '#000' : SQ.textFaint,
+            fontFamily: SQ.ui, fontWeight: 700, fontSize: 15, cursor: selTrack ? 'pointer' : 'default',
+            transition: 'background 0.2s, color 0.2s',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+            Cut the Queue
+            <span style={{ fontFamily: SQ.logo, fontStyle: 'italic', fontSize: 16 }}>$10</span>
+          </button>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+// ─── SHEET — Queue ──────────────────────────────────────────
+
+function QueueSheet({ open, onClose, onRequest, onBump, onVote, queuesLeft }) {
+  const cadence = '3P:1V';
+  const queue = buildQueue(cadence, 9);
+  const owners = ['brunchbear','dexx','nm','kira','robo','venue','luna','jp_','milo'];
+  const _qIds = ['q1','q2','q3','q4','q5','q6','q7'];
+  let _pi = 0;
+  const queueTracks = queue.map(kind => kind === 'P' ? track(_qIds[_pi++]) : null);
+  const startY = React.useRef(null);
+
+  function onTouchStart(e) { startY.current = e.touches[0].clientY; }
+  function onTouchEnd(e) {
+    if (startY.current === null) return;
+    const dy = e.changedTouches[0].clientY - startY.current;
+    if (dy > 48) onClose();
+    startY.current = null;
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} height="88%">
+      <div
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{ padding: '0 22px', display: 'flex', flexDirection: 'column', height: '100%' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, flexShrink: 0 }}>
+          <div style={{ fontFamily: SQ.display, fontWeight: 700, fontSize: 24, letterSpacing: -0.8 }}>Up next</div>
+          <span style={{ fontFamily: SQ.mono, fontSize: 10.5, color: SQ.textFaint, letterSpacing: 0.5 }}>LIVE</span>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          {queue.map((kind, i) => {
+            const t = queueTracks[i];
+            const isYou = kind === 'P' && owners[i] === 'brunchbear';
+            const isV = kind === 'V';
+            const firstV = queue.findIndex(k => k === 'V');
+            const isVotingNow = isV && i === firstV;
+
+            return (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '9px 10px',
+                borderBottom: i < queue.length - 1 ? `1px solid ${SQ.border}` : 'none',
+                background: isYou ? hexA(SQ.pink, 0.06) : 'transparent',
+                borderRadius: isYou ? 10 : 0,
+              }}>
+                {kind === 'P' ? (
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: SQ.pink, flexShrink: 0 }} />
+                ) : (
+                  <PVMarker kind="V" size={20} />
+                )}
+
+                {isV ? (
+                  <button onClick={isVotingNow ? onVote : undefined} style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: 'transparent', border: 'none', cursor: isVotingNow ? 'pointer' : 'default',
+                    padding: 0, color: SQ.text, fontFamily: SQ.ui,
+                  }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: isVotingNow ? SQ.text : SQ.textFaint }}>
+                      {isVotingNow ? 'Vote now' : 'Vote Soon'}
+                    </span>
+                    {isVotingNow && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ width: 5, height: 5, borderRadius: 3, background: SQ.text, animation: 'sqPulse 1.6s infinite' }} />
+                        <span style={{ fontFamily: SQ.mono, fontSize: 10.5, color: SQ.text }}>62 votes</span>
+                      </span>
+                    )}
+                  </button>
+                ) : (
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 11 }}>
+                    <AlbumThumb trk={t} size={36} radius={6} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                      <div style={{ fontSize: 11, color: SQ.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {t.artist}
+                        <span style={{ color: SQ.pink, fontFamily: SQ.mono, marginLeft: 6 }}>
+                          · {owners[i]}{isYou ? ' (you)' : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ padding: '10px 0 14px', display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button onClick={onRequest} style={{
+            flex: 1, height: 56, borderRadius: 14,
+            background: 'rgba(255,255,255,0.10)', border: `1.5px solid ${SQ.borderStrong}`,
+            color: SQ.text, fontFamily: SQ.ui, fontWeight: 600, fontSize: 14,
+            cursor: 'pointer',
+          }}>Request a song</button>
+          <button onClick={onBump} style={{
+            flex: 1, height: 56, borderRadius: 14,
+            background: 'rgba(255,255,255,0.10)', border: `1.5px solid ${SQ.borderStrong}`,
+            color: SQ.text, fontFamily: SQ.ui, fontWeight: 600, fontSize: 14, cursor: 'pointer',
+          }}>Cut the Queue</button>
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+// ─── OVERLAY — Queue Modal ───────────────────────────────────
+
+function QueueModal({ open, onClose, onConfirm, queuesLeft }) {
+  const [selTrack, setSelTrack] = React.useState(null);
+  const [confirm, setConfirm] = React.useState(false);
+  const [expandedId, setExpandedId] = React.useState(null);
+  const results = TRACK_LIB.slice(2, 8);
+
+  React.useEffect(() => {
+    if (!open) { setConfirm(false); setSelTrack(null); setExpandedId(null); }
+  }, [open]);
+
+  function pickTrack(t) { setSelTrack(t); setConfirm(true); }
+  function handleAction(t) {
+    if (expandedId === t.id) {
+      pickTrack(t);
+    } else {
+      setExpandedId(t.id);
+    }
+  }
+  function doConfirm() { setConfirm(false); setSelTrack(null); setExpandedId(null); onConfirm(); }
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 30,
+      background: SQ.bg,
+      transform: open ? 'translateY(0)' : 'translateY(100%)',
+      transition: 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)',
+      display: 'flex', flexDirection: 'column',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '14px 18px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ fontFamily: SQ.display, fontWeight: 700, fontSize: 22, letterSpacing: -0.8 }}>Request a song</div>
+        <button onClick={onClose} style={{
+          border: 'none', background: 'rgba(255,255,255,0.08)', color: SQ.text,
+          width: 34, height: 34, borderRadius: 17, fontSize: 18, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>✕</button>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: '0 18px', flexShrink: 0 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '11px 14px',
+          border: `1px solid ${SQ.border}`,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="6" cy="6" r="4.5" stroke="rgba(245,245,247,0.5)" strokeWidth="1.5" />
+            <path d="M9.5 9.5L13 13" stroke="rgba(245,245,247,0.5)" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <span style={{ color: SQ.text, fontSize: 14 }}>padam</span>
+          <span style={{ width: 1, height: 14, background: SQ.pink, marginLeft: 1, animation: 'sqPulse 1s infinite' }} />
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto', paddingBottom: 4 }}>
+          {['Patron-queueable','Pop','House','Hyperpop','Throwback'].map((f, i) => (
+            <span key={f} style={{
+              padding: '5px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+              background: i === 0 ? hexA(SQ.pink, 0.18) : 'rgba(255,255,255,0.05)',
+              color: i === 0 ? SQ.pink : SQ.textMuted,
+              border: i === 0 ? `1px solid ${SQ.pink}` : `1px solid ${SQ.border}`,
+            }}>{f}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Results */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '10px 8px 0' }}>
+        {results.map((t) => {
+          const isExpanded = expandedId === t.id;
+          return (
+            <div key={t.id} style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '9px 10px', borderRadius: 10,
+              marginBottom: 2,
+            }}>
+              <AlbumThumb trk={t} size={46} radius={8} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                <div style={{ fontSize: 12, color: SQ.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.artist}</div>
+              </div>
+              {/* "+" → morph → "Request" pill. Same button, animated width. */}
+              <button onClick={() => handleAction(t)} style={{
+                flexShrink: 0,
+                width: isExpanded ? 92 : 32,
+                height: 32, borderRadius: isExpanded ? 16 : 8,
+                background: isExpanded ? SQ.pink : 'transparent',
+                color: isExpanded ? '#0A0A0B' : SQ.text,
+                border: isExpanded ? 'none' : `1px solid ${SQ.borderStrong}`,
+                fontFamily: SQ.ui, fontSize: isExpanded ? 13 : 18,
+                fontWeight: isExpanded ? 700 : 500, letterSpacing: -0.2,
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden', whiteSpace: 'nowrap',
+                transition: 'width 0.22s cubic-bezier(0.32, 0.72, 0, 1), background 0.22s, color 0.22s, border-radius 0.22s, font-size 0.18s',
+              }}>{isExpanded ? 'Request' : '+'}</button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Confirm overlay */}
+      {confirm && selTrack && (
+        <div style={{
+          position: 'absolute', inset: 0, background: 'rgba(10,10,11,0.78)',
+          backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'flex-end', zIndex: 5,
+          animation: 'sqFadeIn 0.2s',
+        }}>
+          <div style={{
+            width: '100%', background: SQ.surface, borderRadius: '22px 22px 0 0',
+            padding: '14px 22px 32px', borderTop: `1px solid ${SQ.borderStrong}`,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: SQ.borderStrong }} />
+            </div>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 16 }}>
+              <AlbumArt trk={selTrack} size={72} radius={10} glow={false} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: SQ.display, fontSize: 18, fontWeight: 700, letterSpacing: -0.5 }}>{selTrack.title}</div>
+                <div style={{ color: SQ.textMuted, fontSize: 13 }}>{selTrack.artist}</div>
+              </div>
+            </div>
+            <div style={{
+              padding: '10px 12px', borderRadius: 10, marginBottom: 16,
+              background: hexA(SQ.pink, 0.08), border: `1px solid ${hexA(SQ.pink, 0.38)}`,
+              fontSize: 13, color: SQ.text,
+            }}>
+              Requests Remaining: <b style={{ color: SQ.pink }}>{Math.max(0, queuesLeft - 1)}</b>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirm(false)} style={{
+                flex: 1, height: 54, borderRadius: 14,
+                border: `1.5px solid ${SQ.borderStrong}`, background: 'transparent', color: SQ.text,
+                fontFamily: SQ.ui, fontWeight: 600, fontSize: 15, cursor: 'pointer',
+              }}>Cancel</button>
+              <button onClick={doConfirm} style={{
+                flex: 1, height: 54, borderRadius: 14, border: 'none',
+                background: SQ.text, color: SQ.bg,
+                fontFamily: SQ.ui, fontWeight: 600, fontSize: 15, cursor: 'pointer',
+              }}>Send request</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── SCREEN 3 — Out of Queues ───────────────────────────────
+
+function OutOfQueuesScene({ nickname, onBack, onTopUp }) {
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '24px 22px 24px', alignItems: 'center', textAlign: 'center', position: 'relative' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <div style={{
+          position: 'absolute', top: '-18%', left: '-15%', width: '70%', aspectRatio: '1/1',
+          background: 'radial-gradient(circle, rgba(255,46,147,0.3), transparent 65%)',
+          filter: 'blur(42px)', animation: 'sqDrift 18s ease-in-out infinite alternate',
+        }} />
+      </div>
+      <div style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+        <Wordmark size={18} />
+        <Chip color={SQ.pink}>@{nickname}</Chip>
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, position: 'relative' }}>
+        {/* Stacked cards visual */}
+        <div style={{ position: 'relative', width: 180, height: 180 }}>
+          <div style={{ position: 'absolute', inset: 0, transform: 'rotate(-8deg) translate(-14px, 6px)', borderRadius: 14, background: 'rgba(255,255,255,0.04)', border: `1px solid ${SQ.border}` }} />
+          <div style={{ position: 'absolute', inset: 0, transform: 'rotate(6deg) translate(14px, -2px)', borderRadius: 14, background: 'rgba(255,255,255,0.06)', border: `1px solid ${SQ.border}` }} />
+          <div style={{ position: 'absolute', inset: 0, borderRadius: 14, background: SQ.surface, border: `1.5px solid ${SQ.borderStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ fontFamily: SQ.display, fontSize: 64, fontWeight: 800, letterSpacing: -3, color: SQ.pink }}>0</div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontFamily: SQ.display, fontWeight: 700, fontSize: 28, letterSpacing: -1 }}>Out of queues</div>
+          <div style={{ marginTop: 8, color: SQ.textMuted, fontSize: 13.5, lineHeight: 1.55, maxWidth: 280 }}>
+            You used all 3 queues tonight. Top up to keep stacking the deck — votes are still free.
+          </div>
+        </div>
+
+        <div style={{
+          width: '100%', padding: '14px 16px', borderRadius: 14,
+          background: hexA(SQ.pink, 0.08), border: `1.5px solid ${SQ.pink}`,
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <div style={{ fontFamily: SQ.display, fontWeight: 800, fontSize: 38, letterSpacing: -2, color: SQ.pink, lineHeight: 1 }}>$5</div>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>3 more queues</div>
+            <div style={{ fontSize: 11, color: SQ.textMuted }}>Goes to the bar tab. Refunded on close.</div>
+          </div>
+        </div>
+
+        <button onClick={onTopUp} style={{
+          height: 58, borderRadius: 29, border: 'none',
+          background: SQ.text, color: SQ.bg,
+          fontFamily: SQ.ui, fontWeight: 600, fontSize: 16,
+          padding: '0 32px', cursor: 'pointer',
+        }}>Play More Music →</button>
+
+        <button onClick={onBack} style={{
+          background: 'transparent', border: 'none', color: SQ.textMuted, fontSize: 13,
+          textDecoration: 'underline', cursor: 'pointer', fontFamily: SQ.ui,
+        }}>Back to Now Playing</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, position: 'relative' }}>
+        <Chip ghost color={SQ.textFaint}>VOTES STILL OPEN</Chip>
+        <Chip ghost color={SQ.textFaint}>SKIPS STILL FREE</Chip>
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ────────────────────────────────────────────────────
+
+const THEMES = [
+  { name: 'White',   color: '#FFFFFF' },
+  { name: 'Magenta', color: '#FF2E93' },
+  { name: 'Blue',    color: '#0080FF' },
+  { name: 'Lime',    color: '#AAFF00' },
+  { name: 'Sunset',  color: '#FF4500' },
+  { name: 'Violet',  color: '#9900FF' },
+];
+
+function applyTheme(color) {
+  SQ.pink = color; SQ.cyan = color;
+  SQ.pColor = color;
+  SQ.pinkSoft = hexA(color, 0.18);
+  SQ.cyanSoft = hexA(color, 0.16);
+  document.documentElement.style.setProperty('--sq-pink', color);
+  document.documentElement.style.setProperty('--sq-cyan', color);
+}
+
+function App() {
+  const [scene, setScene] = React.useState('entry');
+  const [nickname, setNickname] = React.useState('');
+  const [queuesLeft, setQueuesLeft] = React.useState(2);
+  const [hasQueued, setHasQueued] = React.useState(false);
+  const [youUp, setYouUp] = React.useState(false);
+  const [skipCount, setSkipCount] = React.useState(12);
+  const [sheet, setSheet] = React.useState(null); // 'vote' | 'bump' | 'queue'
+  const [queueModal, setQueueModal] = React.useState(false);
+  const [toast, setToast] = React.useState('');
+  const [toastVisible, setToastVisible] = React.useState(false);
+
+  const [themeIdx, setThemeIdx] = React.useState(0);
+
+  React.useEffect(() => { applyTheme(THEMES[0].color); }, []);
+
+  function cycleTheme() {
+    const next = (themeIdx + 1) % THEMES.length;
+    setThemeIdx(next);
+    applyTheme(THEMES[next].color);
+  }
+
+  function showToast(msg) {
+    setToast(msg);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2400);
+  }
+
+  function handleJoin(nick) {
+    setNickname(nick);
+    setScene('nowPlaying');
+  }
+
+  function handleRequest() {
+    if (queuesLeft <= 0) {
+      setScene('outOfQueues');
+    } else {
+      setSheet(null);
+      setTimeout(() => setQueueModal(true), sheet ? 340 : 0);
+    }
+  }
+
+  function handleQueued() {
+    setQueueModal(false);
+    setQueuesLeft(q => Math.max(0, q - 1));
+    setHasQueued(true);
+    showToast('Song requested ✓');
+    if (!youUp) setTimeout(() => setYouUp(true), 1800);
+  }
+
+  function handleBumped() {
+    setSheet(null);
+    setYouUp(true);
+    setHasQueued(true);
+    setTimeout(() => showToast("You're up next!"), 380);
+  }
+
+  function handleVoteLocked() {
+    setSheet(null);
+    setTimeout(() => showToast('Locked ✓'), 380);
+  }
+
+  function handleTopUp() {
+    setQueuesLeft(3);
+    setScene('nowPlaying');
+    setTimeout(() => setQueueModal(true), 260);
+  }
+
+  return (
+    <PhoneShell>
+      {/* Entry */}
+      <Scene active={scene === 'entry'}>
+        <EntryScene onJoin={handleJoin} />
+      </Scene>
+
+      {/* Now Playing (hub with sheets + queue modal) */}
+      <Scene active={scene === 'nowPlaying'}>
+        <NowPlayingScene
+          nickname={nickname}
+          queuesLeft={queuesLeft}
+          hasQueued={hasQueued}
+          youUp={youUp}
+          skipCount={skipCount}
+          onRequest={handleRequest}
+          onVote={() => setSheet('vote')}
+          onBump={() => setSheet('bump')}
+          onQueue={() => setSheet('queue')}
+          onSkip={() => setSkipCount(s => Math.min(40, s + 1))}
+          onThemeClick={cycleTheme}
+        />
+
+        <VoteSheet
+          open={sheet === 'vote'}
+          onClose={() => setSheet(null)}
+          onLock={handleVoteLocked}
+        />
+        <BumpSheet
+          open={sheet === 'bump'}
+          onClose={() => setSheet(null)}
+          onBump={handleBumped}
+          nickname={nickname}
+        />
+        <QueueSheet
+          open={sheet === 'queue'}
+          onClose={() => setSheet(null)}
+          onRequest={handleRequest}
+          onBump={() => { setSheet(null); setTimeout(() => setSheet('bump'), 50); }}
+          onVote={() => { setSheet(null); setTimeout(() => setSheet('vote'), 50); }}
+          queuesLeft={queuesLeft}
+        />
+
+        {/* Queue modal slides up over everything */}
+        <QueueModal
+          open={queueModal}
+          onClose={() => setQueueModal(false)}
+          onConfirm={handleQueued}
+          queuesLeft={queuesLeft}
+        />
+      </Scene>
+
+      {/* Out of Queues */}
+      <Scene active={scene === 'outOfQueues'}>
+        <OutOfQueuesScene
+          nickname={nickname}
+          onBack={() => setScene('nowPlaying')}
+          onTopUp={handleTopUp}
+        />
+      </Scene>
+
+      {/* Toast (global, above everything) */}
+      <Toast msg={toast} visible={toastVisible} />
+    </PhoneShell>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
